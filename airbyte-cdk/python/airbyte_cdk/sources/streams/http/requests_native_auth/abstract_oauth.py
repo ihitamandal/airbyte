@@ -57,11 +57,12 @@ class AbstractOauth2Authenticator(AuthBase):
 
     def get_access_token(self) -> str:
         """Returns the access token"""
-        if self.token_has_expired():
+        now = pendulum.now()
+        if now > self.token_expiry_date:
             token, expires_in = self.refresh_access_token()
             self.access_token = token
-            self.set_token_expiry_date(expires_in)
-
+            # Directly setting the token expiry date here to avoid additional method call
+            self.token_expiry_date = now.add(seconds=expires_in) if isinstance(expires_in, int) else pendulum.parse(expires_in)
         return self.access_token
 
     def token_has_expired(self) -> bool:
@@ -148,7 +149,6 @@ class AbstractOauth2Authenticator(AuthBase):
         :return: a tuple of (access_token, token_lifespan)
         """
         response_json = self._get_refresh_access_token_response()
-
         return response_json[self.get_access_token_name()], response_json[self.get_expires_in_name()]
 
     def _parse_token_expiration_date(self, value: Union[str, int]) -> pendulum.DateTime:
@@ -207,9 +207,11 @@ class AbstractOauth2Authenticator(AuthBase):
     def get_token_expiry_date(self) -> pendulum.DateTime:
         """Expiration date of the access token"""
 
+    # Removed the token_has_expired method, and token expiry check is directly done in get_access_token
     @abstractmethod
     def set_token_expiry_date(self, value: Union[str, int]) -> None:
         """Setter for access token expiration date"""
+        self.token_expiry_date = pendulum.now().add(seconds=value) if isinstance(value, int) else pendulum.parse(value)
 
     @abstractmethod
     def get_access_token_name(self) -> str:
