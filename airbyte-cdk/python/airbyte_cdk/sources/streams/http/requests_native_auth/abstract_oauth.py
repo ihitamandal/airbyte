@@ -115,25 +115,23 @@ class AbstractOauth2Authenticator(AuthBase):
     )
     def _get_refresh_access_token_response(self) -> Any:
         try:
-            response = requests.request(method="POST", url=self.get_token_refresh_endpoint(), data=self.build_refresh_request_body())
+            response = requests.request("POST", self.get_token_refresh_endpoint(), data=self.build_refresh_request_body())
+
+            response_json = response.json() if response.ok else None
+            self._log_response(response)
+
             if response.ok:
-                response_json = response.json()
-                # Add the access token to the list of secrets so it is replaced before logging the response
-                # An argument could be made to remove the prevous access key from the list of secrets, but unmasking values seems like a security incident waiting to happen...
                 access_key = response_json.get(self.get_access_token_name())
                 if not access_key:
-                    raise Exception("Token refresh API response was missing access token {self.get_access_token_name()}")
+                    raise Exception(f"Token refresh API response was missing access token {self.get_access_token_name()}")
                 add_to_secrets(access_key)
-                self._log_response(response)
                 return response_json
             else:
-                # log the response even if the request failed for troubleshooting purposes
-                self._log_response(response)
                 response.raise_for_status()
+
         except requests.exceptions.RequestException as e:
-            if e.response is not None:
-                if e.response.status_code == 429 or e.response.status_code >= 500:
-                    raise DefaultBackoffException(request=e.response.request, response=e.response)
+            if e.response and (e.response.status_code in {429} or e.response.status_code >= 500):
+                raise DefaultBackoffException(request=e.response.request, response=e.response)
             if self._wrap_refresh_token_exception(e):
                 message = "Refresh token is invalid or expired. Please re-authenticate from Sources/<your source>/Settings."
                 raise AirbyteTracedException(internal_message=message, message=message, failure_type=FailureType.config_error)
@@ -214,10 +212,12 @@ class AbstractOauth2Authenticator(AuthBase):
     @abstractmethod
     def get_access_token_name(self) -> str:
         """Field to extract access token from in the response"""
+        pass
 
     @abstractmethod
     def get_expires_in_name(self) -> str:
         """Returns the expires_in field name"""
+        pass
 
     @abstractmethod
     def get_refresh_request_body(self) -> Mapping[str, Any]:
