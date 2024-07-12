@@ -12,6 +12,7 @@ from airbyte_cdk.sources.declarative.auth.declarative_authenticator import Decla
 from airbyte_cdk.sources.declarative.interpolation.interpolated_boolean import InterpolatedBoolean
 from airbyte_cdk.sources.declarative.interpolation.interpolated_mapping import InterpolatedMapping
 from airbyte_cdk.sources.declarative.interpolation.interpolated_string import InterpolatedString
+from airbyte_cdk.sources.declarative.interpolation.jinja import JinjaInterpolation
 
 
 class JwtAlgorithm(str):
@@ -168,3 +169,9 @@ class JwtAuthenticator(DeclarativeAuthenticator):
     @property
     def token(self) -> str:
         return f"{self._get_header_prefix()} {self._get_signed_token()}" if self._get_header_prefix() else self._get_signed_token()
+
+    def __init__(self, string: str, default: Any = None, parameters: Mapping[str, Any] = None) -> None:
+        self.string = string
+        self.default = default or string
+        self._interpolation = JinjaInterpolation()
+        self._parameters = parameters
