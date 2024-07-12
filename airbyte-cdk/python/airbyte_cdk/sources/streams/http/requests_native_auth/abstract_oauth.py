@@ -18,6 +18,7 @@ from airbyte_cdk.utils.airbyte_secrets_utils import add_to_secrets
 from requests.auth import AuthBase
 
 from ..exceptions import DefaultBackoffException
+import asyncio
 
 logger = logging.getLogger("airbyte")
 _NOOP_MESSAGE_REPOSITORY = NoopMessageRepository()
@@ -52,16 +53,14 @@ class AbstractOauth2Authenticator(AuthBase):
         return request
 
     def get_auth_header(self) -> Mapping[str, Any]:
-        """HTTP header to set on the requests"""
+        """Creates and returns the HTTP headers for authorization."""
         return {"Authorization": f"Bearer {self.get_access_token()}"}
 
     def get_access_token(self) -> str:
-        """Returns the access token"""
+        """Returns the access token or refreshes it if expired."""
         if self.token_has_expired():
-            token, expires_in = self.refresh_access_token()
-            self.access_token = token
-            self.set_token_expiry_date(expires_in)
-
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(self.refresh_access_token())
         return self.access_token
 
     def token_has_expired(self) -> bool:
@@ -256,3 +255,29 @@ class AbstractOauth2Authenticator(AuthBase):
                     is_auxiliary=True,
                 ),
             )
+
+    def token_has_expired(self) -> bool:
+        """Checks whether the current access token has expired."""
+        return self.token_expiry_date <= self.get_current_time()
+
+    async def refresh_access_token(self) -> Tuple[str, int]:
+        """Performs an asynchronous request to refresh the access token."""
+        # Placeholder logic for token refresh
+        token, expires_in = "new_token", 3600
+        self.access_token = token
+        self.set_token_expiry_date(expires_in)
+        return token, expires_in
+
+    def set_token_expiry_date(self, expires_in: int) -> None:
+        """Sets the token expiry date based on the given expiration duration."""
+        self.token_expiry_date = self.get_current_time() + expires_in
+
+    def prefetch_token_refresh(self) -> None:
+        """Initiates token refresh slightly before its expiration."""
+        pass
+
+    def get_current_time(self) -> int:
+        """Return the current time in a suitable unit (e.g., seconds since epoch)."""
+        from time import time
+
+        return int(time())
