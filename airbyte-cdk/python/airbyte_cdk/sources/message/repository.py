@@ -65,7 +65,7 @@ class NoopMessageRepository(MessageRepository):
     def log_message(self, level: Level, message_provider: Callable[[], LogMessage]) -> None:
         pass
 
-    def consume_queue(self) -> Iterable[AirbyteMessage]:
+    def consume_queue(self) -> Iterable:
         return []
 
 
