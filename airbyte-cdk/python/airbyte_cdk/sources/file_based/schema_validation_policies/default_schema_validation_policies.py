@@ -34,6 +34,25 @@ class WaitForDiscoverPolicy(AbstractSchemaValidationPolicy):
         return True
 
 
+def is_equal_or_narrower_type(value: Any, expected_type: str) -> bool:
+    if expected_type == "null":
+        return value is None
+    elif expected_type == "boolean":
+        return isinstance(value, bool)
+    elif expected_type == "integer":
+        return isinstance(value, int) and not isinstance(value, bool)
+    elif expected_type == "number":
+        return isinstance(value, (int, float)) and not isinstance(value, bool)
+    elif expected_type == "string":
+        return isinstance(value, str)
+    elif expected_type == "array":
+        return isinstance(value, list)
+    elif expected_type == "object":
+        return isinstance(value, dict)
+    else:
+        return False
+
+
 DEFAULT_SCHEMA_VALIDATION_POLICIES = {
     ValidationPolicy.emit_record: EmitRecordPolicy(),
     ValidationPolicy.skip_record: SkipRecordPolicy(),

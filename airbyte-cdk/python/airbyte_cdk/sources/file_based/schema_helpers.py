@@ -169,29 +169,33 @@ def conforms_to_schema(record: Mapping[str, Any], schema: Mapping[str, Any]) -> 
     - For every column in the record, that column's type is equal to or narrower than the same column's
       type in the schema.
     """
-    schema_columns = set(schema.get("properties", {}).keys())
-    record_columns = set(record.keys())
+    schema_properties = schema.get("properties", {})
+    schema_columns = set(schema_properties.keys())
+    record_columns = record.keys()
 
-    if not record_columns.issubset(schema_columns):
+    if not set(record_columns).issubset(schema_columns):
         return False
 
-    for column, definition in schema.get("properties", {}).items():
-        expected_type = definition.get("type")
+    for column in record_columns:
         value = record.get(column)
-
         if value is not None:
+            definition = schema_properties[column]
+            expected_type = definition.get("type")
+
             if isinstance(expected_type, list):
-                return any(is_equal_or_narrower_type(value, e) for e in expected_type)
-            elif expected_type == "object":
-                return isinstance(value, dict)
-            elif expected_type == "array":
-                if not isinstance(value, list):
+                if not any(is_equal_or_narrower_type(value, e) for e in expected_type):
                     return False
-                array_type = definition.get("items", {}).get("type")
-                if not all(is_equal_or_narrower_type(v, array_type) for v in value):
+            else:
+                if expected_type == "object" and not isinstance(value, dict):
                     return False
-            elif not is_equal_or_narrower_type(value, expected_type):
-                return False
+                elif expected_type == "array":
+                    if not isinstance(value, list):
+                        return False
+                    array_type = definition.get("items", {}).get("type")
+                    if not all(is_equal_or_narrower_type(v, array_type) for v in value):
+                        return False
+                elif not is_equal_or_narrower_type(value, expected_type):
+                    return False
 
     return True
 
