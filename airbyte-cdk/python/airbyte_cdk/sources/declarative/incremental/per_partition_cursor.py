@@ -26,8 +26,8 @@ class PerPartitionKeySerializer:
         return json.dumps(to_serialize, indent=None, separators=(",", ":"), sort_keys=True)
 
     @staticmethod
-    def to_partition(to_deserialize: Any) -> Mapping[str, Any]:
-        return json.loads(to_deserialize)  # type: ignore # The partition is known to be a dict, but the type hint is Any
+    def to_partition(to_deserialize: str) -> Mapping[str, Any]:
+        return json.loads(to_deserialize)
 
 
 class CursorFactory:
