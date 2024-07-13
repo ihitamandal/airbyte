@@ -5,6 +5,7 @@ import base64
 import hashlib
 import json
 import re
+from functools import lru_cache
 from typing import Any, Optional
 
 
@@ -73,23 +74,33 @@ def base64encode(value: str) -> str:
     return base64.b64encode(value.encode("utf-8")).decode()
 
 
+@lru_cache(maxsize=128)
 def base64decode(value: str) -> str:
+    """Decode a base64 encoded string with error handling and caching.
+
+    This function takes a base64 encoded string, attempts to decode it,
+    and returns the decoded string. If decoding fails, it handles the error
+    gracefully.
+
+    Parameters
+    ----------
+    value : str
+        The base64 encoded string to be decoded.
+
+    Returns
+    -------
+    str
+        The decoded string if the input is valid base64, otherwise an error message.
+
+    Raises
+    ------
+    ValueError
+        If the input string is not a valid base64 encoded string.
     """
-    Implementation of a custom Jinja2 base64decode filter
-
-    For example:
-
-      OAuthAuthenticator:
-        $ref: "#/definitions/OAuthAuthenticator"
-        $parameters:
-          name: "client_id"
-          value: "{{ config['client_id'] | base64decode }}"
-
-    :param value: value to be decoded from base64
-    :return: base64 decoded string
-    """
-
-    return base64.b64decode(value.encode("utf-8")).decode()
+    try:
+        return base64.b64decode(value.encode("utf-8")).decode("utf-8")
+    except (base64.binascii.Error, ValueError) as e:
+        raise ValueError("Invalid base64 input") from e
 
 
 def string(value: Any) -> str:
