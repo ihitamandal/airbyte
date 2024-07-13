@@ -35,6 +35,13 @@ class CursorFactory:
         self._create_function = create_function
 
     def create(self) -> DeclarativeCursor:
+        """Creates or retrieves a memoized DeclarativeCursor instance.
+
+        Returns
+        -------
+        DeclarativeCursor
+            A memoized and lazily initialized DeclarativeCursor instance.
+        """
         return self._create_function()
 
 
@@ -303,3 +310,26 @@ class PerPartitionCursor(DeclarativeCursor):
             raise ValueError("Invalid state as stream slices that are emitted should refer to an existing cursor")
         cursor = self._cursor_per_partition[partition_key]
         return cursor
+
+
+def memoized_lazy_cursor_factory(create_function: Callable[[], DeclarativeCursor]) -> Callable[[], DeclarativeCursor]:
+    """Creates a memoized lazy cursor factory.
+
+    Parameters
+    ----------
+    create_function : Callable[[], DeclarativeCursor]
+        Function to create new DeclarativeCursor instances.
+
+    Returns
+    -------
+    Callable[[], DeclarativeCursor]
+        A function returning memoized and lazily initialized cursors.
+    """
+    memo: dict[str, DeclarativeCursor] = {}
+
+    def factory() -> DeclarativeCursor:
+        if "_cursor" not in memo:
+            memo["_cursor"] = create_function()
+        return memo["_cursor"]
+
+    return factory
