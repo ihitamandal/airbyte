@@ -46,53 +46,44 @@ class HttpStatusErrorHandler(ErrorHandler):
         :param response: The HTTP response object.
         :return: A tuple containing the response action, failure type, and error message.
         """
+        if response_or_exception is None:
+            self._logger.error("Response or exception is None.")
+            return ErrorResolution(
+                response_action=ResponseAction.FAIL, failure_type=FailureType.system_error, error_message="Response or exception is None."
+            )
 
         if isinstance(response_or_exception, Exception):
-            mapped_error: Optional[ErrorResolution] = self._error_mapping.get(response_or_exception.__class__)
-
-            if mapped_error is not None:
-                return mapped_error
-            else:
-                self._logger.error(f"Unexpected exception in error handler: {response_or_exception}")
+            error_response = self._error_mapping.get(type(response_or_exception))
+            if error_response is None:
+                error_message = f"Unexpected exception in error handler: {response_or_exception}"
+                self._logger.error(error_message)
                 return ErrorResolution(
-                    response_action=ResponseAction.RETRY,
-                    failure_type=FailureType.system_error,
-                    error_message=f"Unexpected exception in error handler: {response_or_exception}",
+                    response_action=ResponseAction.RETRY, failure_type=FailureType.system_error, error_message=error_message
                 )
+            return error_response
 
-        elif isinstance(response_or_exception, requests.Response):
-            if response_or_exception.status_code is None:
-                self._logger.error("Response does not include an HTTP status code.")
+        if isinstance(response_or_exception, requests.Response):
+            status_code = response_or_exception.status_code
+            if status_code is None:
+                error_message = "Response does not include an HTTP status code."
+                self._logger.error(error_message)
                 return ErrorResolution(
-                    response_action=ResponseAction.RETRY,
-                    failure_type=FailureType.transient_error,
-                    error_message="Response does not include an HTTP status code.",
+                    response_action=ResponseAction.RETRY, failure_type=FailureType.transient_error, error_message=error_message
                 )
 
             if response_or_exception.ok:
-                return ErrorResolution(
-                    response_action=ResponseAction.SUCCESS,
-                    failure_type=None,
-                    error_message=None,
-                )
+                return ErrorResolution(response_action=ResponseAction.SUCCESS)
 
-            error_key = response_or_exception.status_code
-
-            mapped_error = self._error_mapping.get(error_key)
-
-            if mapped_error is not None:
-                return mapped_error
-            else:
-                self._logger.warning(f"Unexpected HTTP Status Code in error handler: '{error_key}'")
+            error_response = self._error_mapping.get(status_code)
+            if error_response is None:
+                self._logger.warning(f"Unexpected HTTP Status Code in error handler: '{status_code}'")
                 return ErrorResolution(
                     response_action=ResponseAction.RETRY,
                     failure_type=FailureType.system_error,
-                    error_message=f"Unexpected HTTP Status Code in error handler: {error_key}",
+                    error_message=f"Unexpected HTTP Status Code in error handler: {status_code}",
                 )
-        else:
-            self._logger.error(f"Received unexpected response type: {type(response_or_exception)}")
-            return ErrorResolution(
-                response_action=ResponseAction.FAIL,
-                failure_type=FailureType.system_error,
-                error_message=f"Received unexpected response type: {type(response_or_exception)}",
-            )
+            return error_response
+
+        error_message = f"Received unexpected response type: {type(response_or_exception)}"
+        self._logger.error(error_message)
+        return ErrorResolution(response_action=ResponseAction.FAIL, failure_type=FailureType.system_error, error_message=error_message)
