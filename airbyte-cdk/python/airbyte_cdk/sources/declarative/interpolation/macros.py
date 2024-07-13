@@ -53,15 +53,16 @@ def timestamp(dt: Union[float, str]) -> Union[int, float]:
     if isinstance(dt, (int, float)):
         return int(dt)
     else:
-        return _str_to_datetime(dt).astimezone(pytz.utc).timestamp()
+        return _str_to_datetime(dt)
 
 
-def _str_to_datetime(s: str) -> datetime.datetime:
+def _str_to_datetime(s: str) -> float:
     parsed_date = parser.isoparse(s)
-    if not parsed_date.tzinfo:
+    if parsed_date.tzinfo:
+        return parsed_date.timestamp()
+    else:
         # Assume UTC if the input does not contain a timezone
-        parsed_date = parsed_date.replace(tzinfo=pytz.utc)
-    return parsed_date.astimezone(pytz.utc)
+        return parsed_date.replace(tzinfo=datetime.timezone.utc).timestamp()
 
 
 def max(*args: typing.Any) -> typing.Any:
