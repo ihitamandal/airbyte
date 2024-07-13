@@ -97,7 +97,7 @@ def day_delta(num_days: int, format: str = "%Y-%m-%dT%H:%M:%S.%f%z") -> str:
     return (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=num_days)).strftime(format)
 
 
-def duration(datestring: str) -> Union[datetime.timedelta, isodate.Duration]:
+def duration(datestring: str) -> Union[datetime.timedelta, datetime.timedelta]:
     """
     Converts ISO8601 duration to datetime.timedelta
 
