@@ -2,13 +2,15 @@
 # Copyright (c) 2023 Airbyte, Inc., all rights reserved.
 #
 
-from typing import Any, List, Mapping, Optional, Sequence, Tuple, Union
+from __future__ import annotations
+from typing import Callable, Iterable, Any, List, Mapping, Optional, Sequence, Tuple, Union
 
 import dpath
 import pendulum
 from airbyte_cdk.config_observation import create_connector_config_control_message, emit_configuration_as_airbyte_control_message
 from airbyte_cdk.sources.message import MessageRepository, NoopMessageRepository
 from airbyte_cdk.sources.streams.http.requests_native_auth.abstract_oauth import AbstractOauth2Authenticator
+from airbyte_cdk.models import AirbyteMessage, Level
 
 
 class Oauth2Authenticator(AbstractOauth2Authenticator):
@@ -216,10 +218,11 @@ class SingleUseRefreshTokenOauth2Authenticator(Oauth2Authenticator):
 
     @staticmethod
     def get_new_token_expiry_date(access_token_expires_in: str, token_expiry_date_format: str = None) -> pendulum.DateTime:
-        if token_expiry_date_format:
-            return pendulum.from_format(access_token_expires_in, token_expiry_date_format)
-        else:
-            return pendulum.now("UTC").add(seconds=int(access_token_expires_in))
+        return (
+            pendulum.from_format(access_token_expires_in, token_expiry_date_format)
+            if token_expiry_date_format
+            else pendulum.now("UTC").add(seconds=int(access_token_expires_in))
+        )
 
     def get_access_token(self) -> str:
         """Retrieve new access and refresh token if the access token has expired.
@@ -233,9 +236,7 @@ class SingleUseRefreshTokenOauth2Authenticator(Oauth2Authenticator):
             self.access_token = new_access_token
             self.set_refresh_token(new_refresh_token)
             self.set_token_expiry_date(new_token_expiry_date)
-            # FIXME emit_configuration_as_airbyte_control_message as been deprecated in favor of package airbyte_cdk.sources.message
-            #  Usually, a class shouldn't care about the implementation details but to keep backward compatibility where we print the
-            #  message directly in the console, this is needed
+
             if not isinstance(self._message_repository, NoopMessageRepository):
                 self._message_repository.emit_message(create_connector_config_control_message(self._connector_config))
             else:
@@ -252,7 +253,17 @@ class SingleUseRefreshTokenOauth2Authenticator(Oauth2Authenticator):
 
     @property
     def _message_repository(self) -> MessageRepository:
-        """
-        Overriding AbstractOauth2Authenticator._message_repository to allow for HTTP request logs
-        """
+        """Overriding AbstractOauth2Authenticator._message_repository to allow for HTTP request logs"""
         return self.__message_repository
+
+    def emit_message(self, message: AirbyteMessage) -> None:
+        pass
+
+    def log_message(self, level: Level, message_provider: Callable[[], LogMessage]) -> None:
+        pass
+
+    def consume_queue(self) -> Iterable[AirbyteMessage]:
+        return []
+
+    def _get_value_from_config(self, config, provided_value, dpath_keys):
+        return provided_value if provided_value is not None else dpath.get(config, dpath_keys)

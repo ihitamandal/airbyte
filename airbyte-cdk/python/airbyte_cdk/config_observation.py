@@ -77,9 +77,11 @@ def emit_configuration_as_airbyte_control_message(config: MutableMapping):
 
 
 def create_connector_config_control_message(config):
-    control_message = AirbyteControlMessage(
-        type=OrchestratorType.CONNECTOR_CONFIG,
-        emitted_at=time.time() * 1000,
-        connectorConfig=AirbyteControlConnectorConfigMessage(config=config),
+    return AirbyteMessage(
+        type=Type.CONTROL,
+        control=AirbyteControlMessage(
+            type=OrchestratorType.CONNECTOR_CONFIG,
+            emitted_at=time.time() * 1000,
+            connectorConfig=AirbyteControlConnectorConfigMessage(config=config),
+        ),
     )
-    return AirbyteMessage(type=Type.CONTROL, control=control_message)

@@ -2,6 +2,7 @@
 # Copyright (c) 2023 Airbyte, Inc., all rights reserved.
 #
 
+from __future__ import annotations
 import json
 import logging
 from abc import ABC, abstractmethod
@@ -43,7 +44,7 @@ def _is_severe_enough(threshold: Level, level: Level) -> bool:
 class MessageRepository(ABC):
     @abstractmethod
     def emit_message(self, message: AirbyteMessage) -> None:
-        raise NotImplementedError()
+        pass
 
     @abstractmethod
     def log_message(self, level: Level, message_provider: Callable[[], LogMessage]) -> None:
