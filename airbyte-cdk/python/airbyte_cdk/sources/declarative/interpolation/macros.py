@@ -5,12 +5,13 @@
 import builtins
 import datetime
 import typing
+from datetime import timedelta
 from typing import Optional, Union
 
 import isodate
 import pytz
 from dateutil import parser
-from isodate import parse_duration
+from isodate import Duration, parse_duration
 
 """
 This file contains macros that can be evaluated by a `JinjaInterpolation` object
@@ -97,14 +98,20 @@ def day_delta(num_days: int, format: str = "%Y-%m-%dT%H:%M:%S.%f%z") -> str:
     return (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=num_days)).strftime(format)
 
 
-def duration(datestring: str) -> Union[datetime.timedelta, isodate.Duration]:
-    """
-    Converts ISO8601 duration to datetime.timedelta
+def duration(datestring: str) -> Union[timedelta, Duration]:
+    """Converts an ISO8601 duration string into datetime.timedelta or isodate.Duration.
 
-    Usage:
-    `"{{ now_utc() - duration('P1D') }}"`
+    Parameters
+    ----------
+    datestring : str
+        The ISO8601 duration string.
+
+    Returns
+    -------
+    Union[datetime.timedelta, isodate.Duration]
+        The parsed duration as a timedelta or isodate.Duration object.
     """
-    return parse_duration(datestring)  # type: ignore # mypy thinks this returns Any for some reason
+    return parse_duration(datestring)
 
 
 def format_datetime(dt: Union[str, datetime.datetime], format: str, input_format: Optional[str] = None) -> str:
