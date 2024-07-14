@@ -24,8 +24,7 @@ class DateTimeStreamStateConverter(AbstractStreamStateConverter):
 
     @property
     @abstractmethod
-    def _zero_value(self) -> Any:
-        ...
+    def _zero_value(self) -> Any: ...
 
     @property
     def zero_value(self) -> datetime:
@@ -36,16 +35,13 @@ class DateTimeStreamStateConverter(AbstractStreamStateConverter):
         return lambda: datetime.now(timezone.utc)
 
     @abstractmethod
-    def increment(self, timestamp: datetime) -> datetime:
-        ...
+    def increment(self, timestamp: datetime) -> datetime: ...
 
     @abstractmethod
-    def parse_timestamp(self, timestamp: Any) -> datetime:
-        ...
+    def parse_timestamp(self, timestamp: Any) -> datetime: ...
 
     @abstractmethod
-    def output_format(self, timestamp: datetime) -> Any:
-        ...
+    def output_format(self, timestamp: datetime) -> Any: ...
 
     def parse_value(self, value: Any) -> Any:
         """
@@ -146,7 +142,9 @@ class IsoMillisConcurrentStreamStateConverter(DateTimeStreamStateConverter):
         return timestamp + timedelta(milliseconds=1)
 
     def output_format(self, timestamp: datetime) -> Any:
-        return timestamp.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+        # Precompute the constant part of the suffix to avoid recomputation
+        # Use zfill to ensure milliseconds are of length 3.
+        return f"{timestamp.strftime('%Y-%m-%dT%H:%M:%S')}.{str(timestamp.microsecond // 1000).zfill(3)}Z"
 
     def parse_timestamp(self, timestamp: str) -> datetime:
         dt_object = pendulum.parse(timestamp)
