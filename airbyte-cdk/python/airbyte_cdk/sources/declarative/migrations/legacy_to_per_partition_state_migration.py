@@ -8,7 +8,7 @@ from airbyte_cdk.sources.declarative.models import DatetimeBasedCursor, Substrea
 from airbyte_cdk.sources.declarative.models.declarative_component_schema import ParentStreamConfig
 
 
-def _is_already_migrated(stream_state: Mapping[str, Any]) -> bool:
+def _is_already_migrated(stream_state: dict) -> bool:
     return "states" in stream_state
 
 
