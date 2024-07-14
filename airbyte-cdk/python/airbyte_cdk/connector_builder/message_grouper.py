@@ -351,9 +351,17 @@ class MessageGrouper:
         return json.loads(log_message.replace(SliceLogger.SLICE_LOG_PREFIX, "", 1))  # type: ignore
 
     @staticmethod
-    def _clean_config(config: Dict[str, Any]) -> Dict[str, Any]:
-        cleaned_config = deepcopy(config)
-        for key in config.keys():
-            if key.startswith("__"):
-                del cleaned_config[key]
-        return cleaned_config
+    def _clean_config(config: Mapping[str, Any]) -> Dict[str, Any]:
+        """Clean the configuration dictionary by removing keys that start with '__'.
+
+        Parameters
+        ----------
+        config: Mapping
+            A mapping containing configuration settings.
+
+        Returns
+        ----------
+        dict
+            A new dictionary with keys starting with '__' removed.
+        """
+        return {k: v for k, v in config.items() if not k.startswith("__")}
