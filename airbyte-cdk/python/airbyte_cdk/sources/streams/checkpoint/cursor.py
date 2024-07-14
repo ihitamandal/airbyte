@@ -46,7 +46,7 @@ class Cursor(ABC):
     @abstractmethod
     def get_stream_state(self) -> StreamState:
         """
-        Returns the current stream state. We would like to restrict it's usage since it does expose internal of state. As of 2023-06-14, it
+        Returns the current stream state. We would like to restrict its usage since it does expose internal state. As of 2023-06-14, it
         is used for two things:
         * Interpolation of the requests
         * Transformation of records
