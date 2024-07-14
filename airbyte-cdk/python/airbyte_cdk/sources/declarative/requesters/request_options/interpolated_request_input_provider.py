@@ -49,11 +49,12 @@ class InterpolatedRequestInputProvider:
         :return: The request inputs to set on an outgoing HTTP request
         """
         kwargs = {"stream_state": stream_state, "stream_slice": stream_slice, "next_page_token": next_page_token}
-        interpolated_value = self._interpolator.eval(  # type: ignore # self._interpolator is always initialized with a value and will not be None
+        interpolated_value = self._interpolator.eval(
             self.config, valid_key_types=valid_key_types, valid_value_types=valid_value_types, **kwargs
         )
 
         if isinstance(interpolated_value, dict):
-            non_null_tokens = {k: v for k, v in interpolated_value.items() if v is not None}
-            return non_null_tokens
-        return interpolated_value  # type: ignore[no-any-return]
+            # Return only non-null values
+            return {k: v for k, v in interpolated_value.items() if v is not None}
+
+        return interpolated_value
