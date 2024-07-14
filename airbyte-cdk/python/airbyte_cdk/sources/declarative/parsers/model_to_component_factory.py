@@ -257,12 +257,10 @@ class ModelToComponentFactory:
         return self._create_component_from_model(model=declarative_component_model, config=config, **kwargs)
 
     def _create_component_from_model(self, model: BaseModel, config: Config, **kwargs: Any) -> Any:
-        if model.__class__ not in self.PYDANTIC_MODEL_TO_CONSTRUCTOR:
-            raise ValueError(f"{model.__class__} with attributes {model} is not a valid component type")
         component_constructor = self.PYDANTIC_MODEL_TO_CONSTRUCTOR.get(model.__class__)
-        if not component_constructor:
-            raise ValueError(f"Could not find constructor for {model.__class__}")
-        return component_constructor(model=model, config=config, **kwargs)
+        if component_constructor:
+            return component_constructor(model=model, config=config, **kwargs)
+        raise ValueError(f"Could not find constructor for {model.__class__}")
 
     @staticmethod
     def create_added_field_definition(model: AddedFieldDefinitionModel, config: Config, **kwargs: Any) -> AddedFieldDefinition:
@@ -324,9 +322,11 @@ class ModelToComponentFactory:
             )
         )
         return ApiKeyAuthenticator(
-            token_provider=token_provider
-            if token_provider is not None
-            else InterpolatedStringTokenProvider(api_token=model.api_token or "", config=config, parameters=model.parameters or {}),
+            token_provider=(
+                token_provider
+                if token_provider is not None
+                else InterpolatedStringTokenProvider(api_token=model.api_token or "", config=config, parameters=model.parameters or {})
+            ),
             request_option=request_option,
             config=config,
             parameters=model.parameters or {},
@@ -390,9 +390,11 @@ class ModelToComponentFactory:
         if token_provider is not None and model.api_token != "":
             raise ValueError("If token_provider is set, api_token is ignored and has to be set to empty string.")
         return BearerAuthenticator(
-            token_provider=token_provider
-            if token_provider is not None
-            else InterpolatedStringTokenProvider(api_token=model.api_token or "", config=config, parameters=model.parameters or {}),
+            token_provider=(
+                token_provider
+                if token_provider is not None
+                else InterpolatedStringTokenProvider(api_token=model.api_token or "", config=config, parameters=model.parameters or {})
+            ),
             config=config,
             parameters=model.parameters or {},
         )
@@ -513,27 +515,17 @@ class ModelToComponentFactory:
     @staticmethod
     def _extract_missing_parameters(error: TypeError) -> List[str]:
         parameter_search = re.search(r"keyword-only.*:\s(.*)", str(error))
-        if parameter_search:
-            return re.findall(r"\'(.+?)\'", parameter_search.group(1))
-        else:
-            return []
+        return re.findall(r"\'(.+?)\'", parameter_search.group(1)) if parameter_search else []
 
     def _create_nested_component(self, model: Any, model_field: str, model_value: Any, config: Config) -> Any:
-        type_name = model_value.get("type", None)
+        type_name = model_value.get("type")
         if not type_name:
-            # If no type is specified, we can assume this is a dictionary object which can be returned instead of a subcomponent
             return model_value
 
-        model_type = self.TYPE_NAME_TO_MODEL.get(type_name, None)
+        model_type = self.TYPE_NAME_TO_MODEL.get(type_name)
         if model_type:
             parsed_model = model_type.parse_obj(model_value)
             try:
-                # To improve usability of the language, certain fields are shared between components. This can come in the form of
-                # a parent component passing some of its fields to a child component or the parent extracting fields from other child
-                # components and passing it to others. One example is the DefaultPaginator referencing the HttpRequester url_base
-                # while constructing a SimpleRetriever. However, custom components don't support this behavior because they are created
-                # generically in create_custom_component(). This block allows developers to specify extra arguments in $parameters that
-                # are needed by a component and could not be shared.
                 model_constructor = self.PYDANTIC_MODEL_TO_CONSTRUCTOR.get(parsed_model.__class__)
                 constructor_kwargs = inspect.getfullargspec(model_constructor).kwonlyargs
                 model_parameters = model_value.get("$parameters", {})
@@ -543,8 +535,8 @@ class ModelToComponentFactory:
                 missing_parameters = self._extract_missing_parameters(error)
                 if missing_parameters:
                     raise ValueError(
-                        f"Error creating component '{type_name}' with parent custom component {model.class_name}: Please provide "
-                        + ", ".join((f"{type_name}.$parameters.{parameter}" for parameter in missing_parameters))
+                        f"Error creating component '{type_name}' with parent custom component {model.class_name}: "
+                        f"Please provide {', '.join((f'{type_name}.$parameters.{parameter}' for parameter in missing_parameters))}"
                     )
                 raise TypeError(f"Error creating component '{type_name}' with parent custom component {model.class_name}: {error}")
         else:
