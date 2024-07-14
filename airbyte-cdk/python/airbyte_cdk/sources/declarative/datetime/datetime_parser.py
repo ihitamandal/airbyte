@@ -52,4 +52,16 @@ class DatetimeParser:
             return dt.strftime(format)
 
     def _is_naive(self, dt: datetime.datetime) -> bool:
+        """Check if a datetime object is naive.
+
+        Parameters
+        ----------
+        dt : datetime.datetime
+            The datetime object to check for naivety.
+
+        Returns
+        -------
+        bool
+            True if the datetime object is naive, False otherwise.
+        """
         return dt.tzinfo is None or dt.tzinfo.utcoffset(dt) is None
