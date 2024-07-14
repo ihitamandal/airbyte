@@ -159,9 +159,11 @@ class CsvParser(FileTypeParser):
         #  sources will likely require one. Rather than modify the interface now we can wait until the real use case
         config_format = _extract_format(config)
         type_inferrer_by_field: Dict[str, _TypeInferrer] = defaultdict(
-            lambda: _JsonTypeInferrer(config_format.true_values, config_format.false_values, config_format.null_values)
-            if config_format.inference_type != InferenceType.NONE
-            else _DisabledTypeInferrer()
+            lambda: (
+                _JsonTypeInferrer(config_format.true_values, config_format.false_values, config_format.null_values)
+                if config_format.inference_type != InferenceType.NONE
+                else _DisabledTypeInferrer()
+            )
         )
         data_generator = self._csv_reader.read_data(config, file, stream_reader, logger, self.file_read_mode)
         read_bytes = 0
@@ -416,8 +418,11 @@ class _JsonTypeInferrer(_TypeInferrer):
 
     @staticmethod
     def _is_number(value: str) -> bool:
+        if not value:
+            return False
+
         try:
-            _value_to_python_type(value, float)
+            float(value)
             return True
         except ValueError:
             return False
@@ -439,7 +444,10 @@ def _value_to_list(value: str) -> List[Any]:
 
 
 def _value_to_python_type(value: str, python_type: type) -> Any:
-    return python_type(value)
+    try:
+        return python_type(value)
+    except ValueError:
+        return None
 
 
 def _format_warning(key: str, value: str, expected_type: Optional[Any]) -> str:
