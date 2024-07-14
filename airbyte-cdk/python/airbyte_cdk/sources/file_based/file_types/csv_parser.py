@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from functools import partial
 from io import IOBase
-from typing import Any, Callable, Dict, Generator, Iterable, List, Mapping, Optional, Set, Tuple
+from typing import Iterator, Any, Callable, Dict, Generator, Iterable, List, Mapping, Optional, Set, Tuple
 from uuid import uuid4
 
 from airbyte_cdk.models import FailureType
@@ -21,6 +21,8 @@ from airbyte_cdk.sources.file_based.file_types.file_type_parser import FileTypeP
 from airbyte_cdk.sources.file_based.remote_file import RemoteFile
 from airbyte_cdk.sources.file_based.schema_helpers import TYPE_PYTHON_MAPPING, SchemaType
 from airbyte_cdk.utils.traced_exception import AirbyteTracedException
+import os
+from concurrent.futures import ThreadPoolExecutor
 
 DIALECT_NAME = "_config_dialect"
 
@@ -159,9 +161,11 @@ class CsvParser(FileTypeParser):
         #  sources will likely require one. Rather than modify the interface now we can wait until the real use case
         config_format = _extract_format(config)
         type_inferrer_by_field: Dict[str, _TypeInferrer] = defaultdict(
-            lambda: _JsonTypeInferrer(config_format.true_values, config_format.false_values, config_format.null_values)
-            if config_format.inference_type != InferenceType.NONE
-            else _DisabledTypeInferrer()
+            lambda: (
+                _JsonTypeInferrer(config_format.true_values, config_format.false_values, config_format.null_values)
+                if config_format.inference_type != InferenceType.NONE
+                else _DisabledTypeInferrer()
+            )
         )
         data_generator = self._csv_reader.read_data(config, file, stream_reader, logger, self.file_read_mode)
         read_bytes = 0
@@ -244,30 +248,26 @@ class CsvParser(FileTypeParser):
 
     @staticmethod
     def _pre_propcess_property_types(property_types: Dict[str, Any]) -> Mapping[str, str]:
-        """
-        Transform the property types to be non-nullable and remove duplicate types if any.
-        Sample input:
-        {
-        "col1": ["string", "null"],
-        "col2": ["string", "string", "null"],
-        "col3": "integer"
-        }
+        """Transform the property types to be non-nullable and remove duplicate types if any.
 
-        Sample output:
-        {
-        "col1": "string",
-        "col2": "string",
-        "col3": "integer",
-        }
+        Parameters
+        ----------
+        property_types : dict
+            Dictionary containing CSV property types with possible null entries.
+
+        Returns
+        -------
+        dict
+            Dictionary with unique, non-nullable property types.
         """
         output = {}
         for prop, prop_type in property_types.items():
             if isinstance(prop_type, list):
                 prop_type_distinct = set(prop_type)
-                prop_type_distinct.remove("null")
+                prop_type_distinct.discard("null")
                 if len(prop_type_distinct) != 1:
                     raise ValueError(f"Could not get non nullable type from {prop_type}")
-                output[prop] = next(iter(prop_type_distinct))
+                output[prop] = prop_type_distinct.pop()
             else:
                 output[prop] = prop_type
         return output
@@ -331,6 +331,54 @@ class CsvParser(FileTypeParser):
                 f"{FileBasedSourceError.ERROR_CASTING_VALUE.value}: {','.join([w for w in warnings])}",
             )
         return result
+
+    @staticmethod
+    def _lazy_read_chunk(chunk: str) -> Iterable[list[str]]:
+        """Read a chunk of CSV file lazily.
+
+        Parameters
+        ----------
+        chunk : str
+            Chunk of CSV data.
+
+        Yields
+        ------
+        list[str]
+            A row of CSV data.
+        """
+        reader = csv.reader(chunk.splitlines())
+        for row in reader:
+            yield row
+
+    def _multithreaded_csv_reader(self, file_path: str, num_threads: int) -> Iterator[list[str]]:
+        """Read CSV file in parallel using multiple threads and lazy evaluation.
+
+        Parameters
+        ----------
+        file_path : str
+            Path to the CSV file.
+        num_threads : int
+            Number of threads to use for reading the file.
+
+        Yields
+        ------
+        list[str]
+            A row of CSV data.
+        """
+
+        def read_chunk(start: int, size: int) -> str:
+            with open(file_path, "r") as f:
+                f.seek(start)
+                return f.read(size)
+
+        file_size = os.path.getsize(file_path)
+        chunk_size = file_size // num_threads
+
+        with ThreadPoolExecutor(max_workers=num_threads) as executor:
+            futures = [executor.submit(read_chunk, i * chunk_size, chunk_size) for i in range(num_threads)]
+            for future in futures:
+                chunk = future.result()
+                yield from self._lazy_read_chunk(chunk)
 
 
 class _TypeInferrer(ABC):
