@@ -324,9 +324,11 @@ class ModelToComponentFactory:
             )
         )
         return ApiKeyAuthenticator(
-            token_provider=token_provider
-            if token_provider is not None
-            else InterpolatedStringTokenProvider(api_token=model.api_token or "", config=config, parameters=model.parameters or {}),
+            token_provider=(
+                token_provider
+                if token_provider is not None
+                else InterpolatedStringTokenProvider(api_token=model.api_token or "", config=config, parameters=model.parameters or {})
+            ),
             request_option=request_option,
             config=config,
             parameters=model.parameters or {},
@@ -390,9 +392,11 @@ class ModelToComponentFactory:
         if token_provider is not None and model.api_token != "":
             raise ValueError("If token_provider is set, api_token is ignored and has to be set to empty string.")
         return BearerAuthenticator(
-            token_provider=token_provider
-            if token_provider is not None
-            else InterpolatedStringTokenProvider(api_token=model.api_token or "", config=config, parameters=model.parameters or {}),
+            token_provider=(
+                token_provider
+                if token_provider is not None
+                else InterpolatedStringTokenProvider(api_token=model.api_token or "", config=config, parameters=model.parameters or {})
+            ),
             config=config,
             parameters=model.parameters or {},
         )
@@ -511,12 +515,10 @@ class ModelToComponentFactory:
         return cls.__module__ == "builtins"
 
     @staticmethod
-    def _extract_missing_parameters(error: TypeError) -> List[str]:
-        parameter_search = re.search(r"keyword-only.*:\s(.*)", str(error))
-        if parameter_search:
+    def _extract_missing_parameters(error: TypeError) -> list[str]:
+        if parameter_search := re.search(r"keyword-only.*:\s(.*)", str(error)):
             return re.findall(r"\'(.+?)\'", parameter_search.group(1))
-        else:
-            return []
+        return []
 
     def _create_nested_component(self, model: Any, model_field: str, model_value: Any, config: Config) -> Any:
         type_name = model_value.get("type", None)
@@ -1175,3 +1177,9 @@ class ModelToComponentFactory:
 
     def _evaluate_log_level(self, emit_connector_builder_messages: bool) -> Level:
         return Level.DEBUG if emit_connector_builder_messages else Level.INFO
+
+    @property
+    def message_repository(self) -> MessageRepository:
+        if self._message_repository is None:
+            self._message_repository = InMemoryMessageRepository(self._evaluate_log_level(self._emit_connector_builder_messages))
+        return self._message_repository
