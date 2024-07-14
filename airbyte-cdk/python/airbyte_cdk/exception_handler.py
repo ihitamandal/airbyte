@@ -40,7 +40,8 @@ def init_uncaught_exception_handler(logger: logging.Logger) -> None:
 
 
 def generate_failed_streams_error_message(stream_failures: Mapping[str, List[Exception]]) -> str:
-    failures = "\n".join(
-        [f"{stream}: {filter_secrets(exception.__repr__())}" for stream, exceptions in stream_failures.items() for exception in exceptions]
+    failure_list = (
+        f"{stream}: {filter_secrets(repr(exception))}" for stream, exceptions in stream_failures.items() for exception in exceptions
     )
+    failures = "\n".join(failure_list)
     return f"During the sync, the following streams did not sync successfully: {failures}"
