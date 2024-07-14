@@ -244,21 +244,21 @@ class FileBasedConcurrentCursor(AbstractConcurrentFileBasedCursor):
         """
         Returns true if the state's history is full, meaning new entries will start to replace old entries.
         """
-        with self._state_lock:
-            if self._file_to_datetime_history is None:
-                raise RuntimeError("The history object has not been set. This is unexpected. Please contact Support.")
-            return len(self._file_to_datetime_history) >= self.DEFAULT_MAX_HISTORY_SIZE
+        return len(self._file_to_datetime_history) >= self.DEFAULT_MAX_HISTORY_SIZE
 
     def _compute_start_time(self) -> datetime:
         if not self._file_to_datetime_history:
             return datetime.min
-        else:
-            earliest = min(self._file_to_datetime_history.values())
-            earliest_dt = datetime.strptime(earliest, self.DATE_TIME_FORMAT)
-            if self._is_history_full():
-                time_window = datetime.now() - self._time_window_if_history_is_full
-                earliest_dt = min(earliest_dt, time_window)
-            return earliest_dt
+
+        # Finding the earliest datetime in the history
+        earliest = min(self._file_to_datetime_history.values())
+        earliest_dt = datetime.strptime(earliest, self.DATE_TIME_FORMAT)
+
+        if self._is_history_full():
+            time_window = datetime.now() - self._time_window_if_history_is_full
+            earliest_dt = min(earliest_dt, time_window)
+
+        return earliest_dt
 
     def get_start_time(self) -> datetime:
         return self._sync_start
