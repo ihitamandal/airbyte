@@ -88,7 +88,9 @@ class ParquetParser(FileTypeParser):
 
     @staticmethod
     def _extract_partitions(filepath: str) -> List[str]:
-        return [unquote(partition) for partition in filepath.split(os.sep) if "=" in partition]
+        unquote_cached = unquote
+        split_filepath = filepath.split(os.sep)
+        return [unquote_cached(partition) for partition in split_filepath if "=" in partition]
 
     @property
     def file_read_mode(self) -> FileReadMode:
