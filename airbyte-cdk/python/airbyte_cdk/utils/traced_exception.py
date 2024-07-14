@@ -73,7 +73,7 @@ class AirbyteTracedException(Exception):
 
         return AirbyteMessage(type=MessageType.TRACE, trace=trace_message)
 
-    def as_connection_status_message(self) -> Optional[AirbyteMessage]:
+    def as_connection_status_message(self):
         if self.failure_type == FailureType.config_error:
             return AirbyteMessage(
                 type=MessageType.CONNECTION_STATUS, connectionStatus=AirbyteConnectionStatus(status=Status.FAILED, message=self.message)
