@@ -159,9 +159,11 @@ class CsvParser(FileTypeParser):
         #  sources will likely require one. Rather than modify the interface now we can wait until the real use case
         config_format = _extract_format(config)
         type_inferrer_by_field: Dict[str, _TypeInferrer] = defaultdict(
-            lambda: _JsonTypeInferrer(config_format.true_values, config_format.false_values, config_format.null_values)
-            if config_format.inference_type != InferenceType.NONE
-            else _DisabledTypeInferrer()
+            lambda: (
+                _JsonTypeInferrer(config_format.true_values, config_format.false_values, config_format.null_values)
+                if config_format.inference_type != InferenceType.NONE
+                else _DisabledTypeInferrer()
+            )
         )
         data_generator = self._csv_reader.read_data(config, file, stream_reader, logger, self.file_read_mode)
         read_bytes = 0
@@ -368,18 +370,30 @@ class _JsonTypeInferrer(_TypeInferrer):
         self._values.add(value)
 
     def infer(self) -> str:
-        types_by_value = {value: self._infer_type(value) for value in self._values}
-        types_excluding_null_values = [types for types in types_by_value.values() if self._NULL_TYPE not in types]
-        if not types_excluding_null_values:
+        inferred_types = None  # Using 'None' to handle initial intersection case
+        has_non_null_values = False
+
+        for value in self._values:
+            types = self._infer_type(value)
+            if self._NULL_TYPE not in types:
+                has_non_null_values = True
+                if inferred_types is None:
+                    inferred_types = types
+                else:
+                    inferred_types &= types  # Perform intersection directly
+
+        if not has_non_null_values:
             # this is highly unusual but we will consider the column as a string
             return self._STRING_TYPE
 
-        types = set.intersection(*types_excluding_null_values)
-        if self._BOOLEAN_TYPE in types:
+        if inferred_types is None:
+            inferred_types = set()  # Initialize as empty set if all were null
+
+        if self._BOOLEAN_TYPE in inferred_types:
             return self._BOOLEAN_TYPE
-        elif self._INTEGER_TYPE in types:
+        elif self._INTEGER_TYPE in inferred_types:
             return self._INTEGER_TYPE
-        elif self._NUMBER_TYPE in types:
+        elif self._NUMBER_TYPE in inferred_types:
             return self._NUMBER_TYPE
         return self._STRING_TYPE
 
