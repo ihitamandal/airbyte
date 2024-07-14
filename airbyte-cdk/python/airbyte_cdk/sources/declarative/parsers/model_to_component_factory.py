@@ -324,9 +324,11 @@ class ModelToComponentFactory:
             )
         )
         return ApiKeyAuthenticator(
-            token_provider=token_provider
-            if token_provider is not None
-            else InterpolatedStringTokenProvider(api_token=model.api_token or "", config=config, parameters=model.parameters or {}),
+            token_provider=(
+                token_provider
+                if token_provider is not None
+                else InterpolatedStringTokenProvider(api_token=model.api_token or "", config=config, parameters=model.parameters or {})
+            ),
             request_option=request_option,
             config=config,
             parameters=model.parameters or {},
@@ -390,9 +392,11 @@ class ModelToComponentFactory:
         if token_provider is not None and model.api_token != "":
             raise ValueError("If token_provider is set, api_token is ignored and has to be set to empty string.")
         return BearerAuthenticator(
-            token_provider=token_provider
-            if token_provider is not None
-            else InterpolatedStringTokenProvider(api_token=model.api_token or "", config=config, parameters=model.parameters or {}),
+            token_provider=(
+                token_provider
+                if token_provider is not None
+                else InterpolatedStringTokenProvider(api_token=model.api_token or "", config=config, parameters=model.parameters or {})
+            ),
             config=config,
             parameters=model.parameters or {},
         )
@@ -554,6 +558,18 @@ class ModelToComponentFactory:
 
     @staticmethod
     def _is_component(model_value: Any) -> bool:
+        """Check if the given model value is a component.
+
+        Parameters
+        ----------
+        model_value : Any
+            The value to check.
+
+        Returns
+        -------
+        bool
+            True if `model_value` is a dict with a "type" key.
+        """
         return isinstance(model_value, dict) and model_value.get("type") is not None
 
     def create_datetime_based_cursor(self, model: DatetimeBasedCursorModel, config: Config, **kwargs: Any) -> DatetimeBasedCursor:
@@ -1175,3 +1191,11 @@ class ModelToComponentFactory:
 
     def _evaluate_log_level(self, emit_connector_builder_messages: bool) -> Level:
         return Level.DEBUG if emit_connector_builder_messages else Level.INFO
+
+    @property
+    def message_repository(self) -> MessageRepository:
+        """Lazy initialize the message repository."""
+        if not self._message_repo_initialized:
+            self._message_repository = InMemoryMessageRepository(self._evaluate_log_level(self._emit_connector_builder_messages))
+            self._message_repo_initialized = True
+        return self._message_repository
