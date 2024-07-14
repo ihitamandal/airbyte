@@ -85,7 +85,7 @@ class DatetimeFormatInferrer:
 
     def get_inferred_datetime_formats(self) -> Dict[str, str]:
         """
-        Returns the list of candidate datetime fields - the keys are the field names and the values are the inferred datetime formats.
-        For these fields the format was consistent across all visited records.
+        Returns the list of candidate datetime fields - the keys are the field names and the values are
+        the inferred datetime formats. For these fields the format was consistent across all visited records.
         """
-        return self._datetime_candidates or {}
+        return self._datetime_candidates if self._datetime_candidates is not None else {}
