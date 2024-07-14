@@ -110,13 +110,14 @@ class _CsvReader:
         fp.seek(0)
         return headers
 
-    def _auto_generate_headers(self, fp: IOBase, dialect_name: str) -> List[str]:
+    def _auto_generate_headers(self, fp: IOBase, dialect_name: str) -> list:
         """
         Generates field names as [f0, f1, ...] in the same way as pyarrow's csv reader with autogenerate_column_names=True.
         See https://arrow.apache.org/docs/python/generated/pyarrow.csv.ReadOptions.html
         """
-        reader = csv.reader(fp, dialect=dialect_name)  # type: ignore
-        number_of_columns = len(next(reader))  # type: ignore
+        # Read the header once instead of iterating with `next()`
+        number_of_columns = len(next(csv.reader(fp, dialect=dialect_name)))
+        # Use a pre-allocated list for performance
         return [f"f{i}" for i in range(number_of_columns)]
 
     @staticmethod
@@ -159,9 +160,11 @@ class CsvParser(FileTypeParser):
         #  sources will likely require one. Rather than modify the interface now we can wait until the real use case
         config_format = _extract_format(config)
         type_inferrer_by_field: Dict[str, _TypeInferrer] = defaultdict(
-            lambda: _JsonTypeInferrer(config_format.true_values, config_format.false_values, config_format.null_values)
-            if config_format.inference_type != InferenceType.NONE
-            else _DisabledTypeInferrer()
+            lambda: (
+                _JsonTypeInferrer(config_format.true_values, config_format.false_values, config_format.null_values)
+                if config_format.inference_type != InferenceType.NONE
+                else _DisabledTypeInferrer()
+            )
         )
         data_generator = self._csv_reader.read_data(config, file, stream_reader, logger, self.file_read_mode)
         read_bytes = 0
