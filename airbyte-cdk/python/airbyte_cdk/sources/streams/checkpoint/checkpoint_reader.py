@@ -182,7 +182,7 @@ class ResumableFullRefreshCheckpointReader(CheckpointReader):
         self._state = new_state
 
     def get_checkpoint(self) -> Optional[Mapping[str, Any]]:
-        return self._state or {}
+        return self._state  # Since _state is already a Mapping or empty, no additional checks needed
 
 
 class FullRefreshCheckpointReader(CheckpointReader):
