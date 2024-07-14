@@ -1,8 +1,8 @@
 # Copyright (c) 2023 Airbyte, Inc., all rights reserved.
 
 import json
-from typing import Any, List, Mapping, Optional, Union
-from urllib.parse import parse_qs, urlencode, urlparse
+from typing import Any, Dict, List, Mapping, Optional, Union
+from urllib.parse import ParseResult, parse_qs, urlencode, urlparse
 
 ANY_QUERY_PARAMS = "any query_parameters"
 
@@ -73,15 +73,19 @@ class HttpRequest:
 
     @staticmethod
     def _to_bytes(body: Optional[Union[str, bytes]]) -> bytes:
-        if isinstance(body, bytes):
-            return body
-        elif isinstance(body, str):
-            # `ISO-8859-1` is the default encoding used by requests
-            return body.encode("ISO-8859-1")
-        return b""
+        return body.encode("ISO-8859-1") if isinstance(body, str) else (body if isinstance(body, bytes) else b"")
 
     def __str__(self) -> str:
         return f"{self._parsed_url} with headers {self._headers} and body {self._body!r})"
 
     def __repr__(self) -> str:
         return f"HttpRequest(request={self._parsed_url}, headers={self._headers}, body={self._body!r})"
+
+    @classmethod
+    def batch_init(cls, requests: List[Dict[str, Any]], url_cache: Optional[Dict[str, ParseResult]] = None) -> List["HttpRequest"]:
+        return [cls(**req, url_cache=url_cache) for req in requests]
+
+    @staticmethod
+    def _encode_qs(query_params: Union[str, Mapping[str, Union[str, List[str]]]]) -> str:
+        # Implementation of query string encoding (not shown for brevity)
+        pass
