@@ -63,12 +63,12 @@ class HttpRequest:
 
     @staticmethod
     def _to_mapping(body: Optional[Union[str, bytes, Mapping[str, Any]]]) -> Optional[Mapping[str, Any]]:
-        if isinstance(body, Mapping):
-            return body
-        elif isinstance(body, bytes):
-            return json.loads(body.decode())  # type: ignore  # assumes return type of Mapping[str, Any]
+        if isinstance(body, bytes):
+            return json.loads(body.decode())
         elif isinstance(body, str):
-            return json.loads(body)  # type: ignore  # assumes return type of Mapping[str, Any]
+            return json.loads(body)
+        elif isinstance(body, Mapping):
+            return body
         return None
 
     @staticmethod
@@ -85,3 +85,13 @@ class HttpRequest:
 
     def __repr__(self) -> str:
         return f"HttpRequest(request={self._parsed_url}, headers={self._headers}, body={self._body!r})"
+
+    @staticmethod
+    def _encode_qs(query_params: Union[str, Mapping[str, Union[str, List[str]]]]) -> str:
+        if isinstance(query_params, str):
+            return query_params
+        elif isinstance(query_params, Mapping):
+            flat_params = {k: v if isinstance(v, str) else ",".join(v) for k, v in query_params.items()}
+            return urlencode(flat_params, doseq=True)
+        else:
+            raise TypeError("Query parameters must be a string or a mapping")
