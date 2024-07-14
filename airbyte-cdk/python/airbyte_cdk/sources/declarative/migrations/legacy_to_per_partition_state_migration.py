@@ -8,8 +8,20 @@ from airbyte_cdk.sources.declarative.models import DatetimeBasedCursor, Substrea
 from airbyte_cdk.sources.declarative.models.declarative_component_schema import ParentStreamConfig
 
 
-def _is_already_migrated(stream_state: Mapping[str, Any]) -> bool:
-    return "states" in stream_state
+def _is_already_migrated(stream_state: dict[str, object] | None) -> bool:
+    """Check if the key 'states' exists in the stream_state dictionary.
+
+    Parameters
+    ----------
+    stream_state : dict[str, object] | None
+        A dictionary representing the state, or None.
+
+    Returns
+    -------
+    bool
+        True if 'states' key exists in the stream_state dictionary, False otherwise.
+    """
+    return stream_state is not None and "states" in stream_state
 
 
 class LegacyToPerPartitionStateMigration(StateMigration):
