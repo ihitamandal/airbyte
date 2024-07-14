@@ -30,6 +30,7 @@ from airbyte_cdk.utils.constants import ENV_REQUEST_CACHE_PATH
 from airbyte_cdk.utils.stream_status_utils import as_airbyte_message as stream_status_as_airbyte_message
 from airbyte_cdk.utils.traced_exception import AirbyteTracedException
 from requests.auth import AuthBase
+import urllib.parse
 
 BODY_REQUEST_METHODS = ("GET", "POST", "PUT", "PATCH")
 
@@ -128,20 +129,18 @@ class HttpClient:
         if isinstance(self._session, requests_cache.CachedSession):
             self._session.cache.clear()  # type: ignore # cache.clear is not typed
 
-    def _dedupe_query_params(self, url: str, params: Optional[Mapping[str, str]]) -> Mapping[str, str]:
+    def _dedupe_query_params(self, url: str, params: Optional[Mapping[str, str]] = None) -> Mapping[str, str]:
         """
         Remove query parameters from params mapping if they are already encoded in the URL.
         :param url: URL with
         :param params:
         :return:
         """
-        if params is None:
-            params = {}
-        query_string = urllib.parse.urlparse(url).query
-        query_dict = {k: v[0] for k, v in urllib.parse.parse_qs(query_string).items()}
+        if not params:
+            return {}
 
-        duplicate_keys_with_same_value = {k for k in query_dict.keys() if str(params.get(k)) == str(query_dict[k])}
-        return {k: v for k, v in params.items() if k not in duplicate_keys_with_same_value}
+        query_dict = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
+        return {k: v for k, v in params.items() if k not in query_dict or str(params[k]) != str(query_dict[k][0])}
 
     def _create_prepared_request(
         self,
@@ -353,3 +352,8 @@ class HttpClient:
         response: requests.Response = self._send_with_retry(request=request, request_kwargs=request_kwargs, log_formatter=log_formatter)
 
         return request, response
+
+    def _request_session(self, use_cache: bool = False) -> requests.Session:
+        if use_cache:
+            return requests_cache.CachedSession()
+        return requests.Session()
