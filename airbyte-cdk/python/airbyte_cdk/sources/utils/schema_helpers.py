@@ -119,7 +119,6 @@ class ResourceSchemaLoader:
         """
         This method retrieves a JSON schema from the schemas/ folder.
 
-
         The expected file structure is to have all top-level schemas (corresponding to streams) in the "schemas/" folder, with any shared $refs
         living inside the "schemas/shared/" folder. For example:
 
@@ -130,8 +129,10 @@ class ResourceSchemaLoader:
 
         schema_filename = f"schemas/{name}.json"
         raw_file = pkgutil.get_data(self.package_name, schema_filename)
-        if not raw_file:
+
+        if raw_file is None:
             raise IOError(f"Cannot find file {schema_filename}")
+
         try:
             raw_schema = json.loads(raw_file)
         except ValueError as err:
@@ -143,21 +144,26 @@ class ResourceSchemaLoader:
         """
         Resolve links to external references and move it to local "definitions" map.
 
-        :param raw_schema jsonschema to lookup for external links.
-        :return JSON serializable object with references without external dependencies.
+        :param raw_schema: JSON schema to lookup for external links.
+        :return: JSON serializable object with references without external dependencies.
         """
 
         package = importlib.import_module(self.package_name)
-        if package.__file__:
-            base = os.path.dirname(package.__file__) + "/"
-        else:
+        package_file = getattr(package, "__file__", None)
+
+        if package_file is None:
             raise ValueError(f"Package {package} does not have a valid __file__ field")
+
+        base = os.path.dirname(package_file) + "/"
+
         resolved = jsonref.JsonRef.replace_refs(raw_schema, loader=JsonFileLoader(base, "schemas/shared"), base_uri=base)
+
         resolved = resolve_ref_links(resolved)
-        if isinstance(resolved, dict):
-            return resolved
-        else:
+
+        if not isinstance(resolved, dict):
             raise ValueError(f"Expected resolved to be a dict. Got {resolved}")
+
+        return resolved
 
 
 def check_config_against_spec_or_exit(config: Mapping[str, Any], spec: ConnectorSpecification) -> None:
