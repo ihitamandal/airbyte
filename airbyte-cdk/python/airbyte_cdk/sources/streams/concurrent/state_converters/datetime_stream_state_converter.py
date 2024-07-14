@@ -24,8 +24,7 @@ class DateTimeStreamStateConverter(AbstractStreamStateConverter):
 
     @property
     @abstractmethod
-    def _zero_value(self) -> Any:
-        ...
+    def _zero_value(self) -> Any: ...
 
     @property
     def zero_value(self) -> datetime:
@@ -36,16 +35,13 @@ class DateTimeStreamStateConverter(AbstractStreamStateConverter):
         return lambda: datetime.now(timezone.utc)
 
     @abstractmethod
-    def increment(self, timestamp: datetime) -> datetime:
-        ...
+    def increment(self, timestamp: datetime) -> datetime: ...
 
     @abstractmethod
-    def parse_timestamp(self, timestamp: Any) -> datetime:
-        ...
+    def parse_timestamp(self, timestamp: Any) -> datetime: ...
 
     @abstractmethod
-    def output_format(self, timestamp: datetime) -> Any:
-        ...
+    def output_format(self, timestamp: datetime) -> Any: ...
 
     def parse_value(self, value: Any) -> Any:
         """
@@ -145,11 +141,27 @@ class IsoMillisConcurrentStreamStateConverter(DateTimeStreamStateConverter):
     def increment(self, timestamp: datetime) -> datetime:
         return timestamp + timedelta(milliseconds=1)
 
-    def output_format(self, timestamp: datetime) -> Any:
-        return timestamp.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+    def output_format(self, timestamp: datetime) -> str:
+        """Format the given datetime object to an ISO 8601 UTC string including milliseconds.
+
+        Parameters
+        ----------
+        timestamp : datetime
+            The datetime object to be formatted.
+
+        Returns
+        -------
+        str
+            Formatted datetime string in ISO 8601 UTC format with milliseconds.
+        """
+        return f"{timestamp.year}-{timestamp.month:02}-{timestamp.day:02}T{timestamp.hour:02}:{timestamp.minute:02}:{timestamp.second:02}.{timestamp.microsecond // 1000:03}Z"
 
     def parse_timestamp(self, timestamp: str) -> datetime:
         dt_object = pendulum.parse(timestamp)
         if not isinstance(dt_object, DateTime):
             raise ValueError(f"DateTime object was expected but got {type(dt_object)} from pendulum.parse({timestamp})")
         return dt_object  # type: ignore  # we are manually type checking because pendulum.parse may return different types
+
+    def __init__(self) -> None:
+        """Initialize the converter and cache the format string."""
+        self.format_string = "%Y-%m-%dT%H:%M:%S.%fZ"
