@@ -39,18 +39,30 @@ class ConfiguredAirbyteStreamBuilder:
     def build(self) -> ConfiguredAirbyteStream:
         return ConfiguredAirbyteStream.parse_obj(self._stream)
 
+    @staticmethod
+    def _default_stream() -> Dict[str, Any]:
+        return {
+            "stream": {
+                "name": "any name",
+                "json_schema": {},
+                "supported_sync_modes": ["full_refresh", "incremental"],
+                "source_defined_primary_key": [["id"]],
+            },
+            "primary_key": [["id"]],
+            "sync_mode": "full_refresh",
+            "destination_sync_mode": "overwrite",
+        }
+
 
 class CatalogBuilder:
     def __init__(self) -> None:
         self._streams: List[ConfiguredAirbyteStreamBuilder] = []
 
     @overload
-    def with_stream(self, name: ConfiguredAirbyteStreamBuilder) -> "CatalogBuilder":
-        ...
+    def with_stream(self, name: ConfiguredAirbyteStreamBuilder) -> "CatalogBuilder": ...
 
     @overload
-    def with_stream(self, name: str, sync_mode: SyncMode) -> "CatalogBuilder":
-        ...
+    def with_stream(self, name: str, sync_mode: SyncMode) -> "CatalogBuilder": ...
 
     def with_stream(self, name: Union[str, ConfiguredAirbyteStreamBuilder], sync_mode: Union[SyncMode, None] = None) -> "CatalogBuilder":
         # As we are introducing a fully fledge ConfiguredAirbyteStreamBuilder, we would like to deprecate the previous interface
