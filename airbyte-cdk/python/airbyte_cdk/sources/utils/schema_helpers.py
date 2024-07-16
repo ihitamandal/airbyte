@@ -3,6 +3,7 @@
 #
 
 
+from __future__ import annotations
 import importlib
 import json
 import os
@@ -201,23 +202,20 @@ class InternalConfig(BaseModel):
         return False
 
 
-def split_config(config: Mapping[str, Any]) -> Tuple[dict[str, Any], InternalConfig]:
-    """
-    Break config map object into 2 instances: first is a dict with user defined
-    configuration and second is internal config that contains private keys for
-    acceptance test configuration.
+def split_config(config: Mapping[str, object]) -> Tuple[dict[str, object], InternalConfig]:
+    """Splits the configuration mapping into user-defined and internal configurations.
 
-    :param
-     config - Dict object that has been loaded from config file.
+    Parameters
+    ----------
+    config : Mapping[str, object]
+        Configuration dictionary loaded from the config file.
 
-    :return tuple of user defined config dict with filtered out internal
-    parameters and connector acceptance test internal config object.
+    Returns
+    -------
+    Tuple[dict[str, object], InternalConfig]
+        A tuple containing the user-defined configuration dict with internal
+        parameters filtered out and the InternalConfig object.
     """
-    main_config = {}
-    internal_config = {}
-    for k, v in config.items():
-        if k in InternalConfig.KEYWORDS:
-            internal_config[k] = v
-        else:
-            main_config[k] = v
-    return main_config, InternalConfig.parse_obj(internal_config)
+    internal_config_dict = {k: config[k] for k in InternalConfig.KEYWORDS & config.keys()}
+    main_config = {k: v for k, v in config.items() if k not in InternalConfig.KEYWORDS}
+    return main_config, InternalConfig.parse_obj(internal_config_dict)
