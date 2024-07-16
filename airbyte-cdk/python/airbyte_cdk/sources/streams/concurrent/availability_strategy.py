@@ -39,7 +39,7 @@ class StreamUnavailable(StreamAvailability):
     def is_available(self) -> bool:
         return False
 
-    def message(self) -> Optional[str]:
+    def message(self) -> str:
         return self._message
 
 
