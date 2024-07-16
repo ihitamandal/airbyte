@@ -10,7 +10,10 @@ from airbyte_cdk.test.mock_http import HttpResponse
 
 
 def _extract(path: List[str], response_template: Dict[str, Any]) -> Any:
-    return functools.reduce(lambda a, b: a[b], path, response_template)
+    result = response_template
+    for key in path:
+        result = result[key]
+    return result
 
 
 def _replace_value(dictionary: Dict[str, Any], path: List[str], value: Any) -> None:
