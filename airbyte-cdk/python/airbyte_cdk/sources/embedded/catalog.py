@@ -16,6 +16,20 @@ from airbyte_cdk.sources.embedded.tools import get_first
 
 
 def get_stream(catalog: AirbyteCatalog, stream_name: str) -> Optional[AirbyteStream]:
+    """Returns the stream from `catalog` with the provided `stream_name`.
+
+    Parameters
+    ----------
+    catalog : AirbyteCatalog
+        Catalog object containing multiple streams.
+    stream_name : str
+        Name of the stream to retrieve.
+
+    Returns
+    -------
+    Optional[AirbyteStream]
+        The stream with the provided `stream_name`, or `None` if not found.
+    """
     return get_first(catalog.streams, lambda s: s.name == stream_name)
 
 
