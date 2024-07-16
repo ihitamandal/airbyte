@@ -7,7 +7,7 @@ import json
 import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from functools import partial
+from functools import lru_cache, partial
 from io import IOBase
 from typing import Any, Callable, Dict, Generator, Iterable, List, Mapping, Optional, Set, Tuple
 from uuid import uuid4
@@ -159,9 +159,11 @@ class CsvParser(FileTypeParser):
         #  sources will likely require one. Rather than modify the interface now we can wait until the real use case
         config_format = _extract_format(config)
         type_inferrer_by_field: Dict[str, _TypeInferrer] = defaultdict(
-            lambda: _JsonTypeInferrer(config_format.true_values, config_format.false_values, config_format.null_values)
-            if config_format.inference_type != InferenceType.NONE
-            else _DisabledTypeInferrer()
+            lambda: (
+                _JsonTypeInferrer(config_format.true_values, config_format.false_values, config_format.null_values)
+                if config_format.inference_type != InferenceType.NONE
+                else _DisabledTypeInferrer()
+            )
         )
         data_generator = self._csv_reader.read_data(config, file, stream_reader, logger, self.file_read_mode)
         read_bytes = 0
@@ -383,7 +385,20 @@ class _JsonTypeInferrer(_TypeInferrer):
             return self._NUMBER_TYPE
         return self._STRING_TYPE
 
+    @lru_cache(maxsize=1024)
     def _infer_type(self, value: str) -> Set[str]:
+        """Infer the type(s) of the given string value based on predefined sets and cached results.
+
+        Parameters
+        ----------
+        value : str
+            The value to infer the type of.
+
+        Returns
+        -------
+        Set[str]
+            A set of inferred type strings.
+        """
         inferred_types = set()
 
         if value in self._null_values:
@@ -400,6 +415,18 @@ class _JsonTypeInferrer(_TypeInferrer):
         return inferred_types
 
     def _is_boolean(self, value: str) -> bool:
+        """Check if the provided value is a boolean.
+
+        Parameters
+        ----------
+        value : str
+            The value to check if it is a boolean.
+
+        Returns
+        -------
+        bool
+            True if the value is a boolean, False otherwise.
+        """
         try:
             _value_to_bool(value, self._boolean_trues, self._boolean_falses)
             return True
@@ -408,6 +435,18 @@ class _JsonTypeInferrer(_TypeInferrer):
 
     @staticmethod
     def _is_integer(value: str) -> bool:
+        """Check if the provided value is an integer.
+
+        Parameters
+        ----------
+        value : str
+            The value to check if it is an integer.
+
+        Returns
+        -------
+        bool
+            True if the value is an integer, False otherwise.
+        """
         try:
             _value_to_python_type(value, int)
             return True
@@ -416,6 +455,18 @@ class _JsonTypeInferrer(_TypeInferrer):
 
     @staticmethod
     def _is_number(value: str) -> bool:
+        """Check if the provided value is a number.
+
+        Parameters
+        ----------
+        value : str
+            The value to check if it is a number.
+
+        Returns
+        -------
+        bool
+            True if the value is a number, False otherwise.
+        """
         try:
             _value_to_python_type(value, float)
             return True
