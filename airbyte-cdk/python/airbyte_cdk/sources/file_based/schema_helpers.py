@@ -95,17 +95,23 @@ def merge_schemas(schema1: SchemaType, schema2: SchemaType) -> SchemaType:
     - list with list (union)
     and nothing else.
     """
-    for k, t in list(schema1.items()) + list(schema2.items()):
-        if not isinstance(t, dict) or "type" not in t or not _is_valid_type(t["type"]):
-            raise SchemaInferenceError(FileBasedSourceError.UNRECOGNIZED_TYPE, key=k, type=t)
+    # Type check all schema entries in both schemas
+    type_issues = {
+        k: t
+        for schema in (schema1, schema2)
+        for k, t in schema.items()
+        if not isinstance(t, dict) or "type" not in t or not _is_valid_type(t["type"])
+    }
+    if type_issues:
+        raise SchemaInferenceError(
+            FileBasedSourceError.UNRECOGNIZED_TYPE, key=next(iter(type_issues)), type=type_issues[next(iter(type_issues))]
+        )
 
-    merged_schema: Dict[str, Any] = deepcopy(schema1)  # type: ignore  # as of 2023-08-08, deepcopy can copy Mapping
+    merged_schema: Dict[str, Any] = {**schema1}  # shallow copy is sufficient
     for k2, t2 in schema2.items():
         t1 = merged_schema.get(k2)
-        if t1 is None:
+        if t1 is None or t1 == t2:
             merged_schema[k2] = t2
-        elif t1 == t2:
-            continue
         else:
             merged_schema[k2] = _choose_wider_type(k2, t1, t2)
 
