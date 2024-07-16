@@ -36,7 +36,8 @@ class StreamUnavailable(StreamAvailability):
     def __init__(self, message: str):
         self._message = message
 
-    def is_available(self) -> bool:
+    @staticmethod
+    def is_available() -> bool:
         return False
 
     def message(self) -> Optional[str]:
