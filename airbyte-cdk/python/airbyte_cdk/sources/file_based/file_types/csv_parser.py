@@ -159,9 +159,11 @@ class CsvParser(FileTypeParser):
         #  sources will likely require one. Rather than modify the interface now we can wait until the real use case
         config_format = _extract_format(config)
         type_inferrer_by_field: Dict[str, _TypeInferrer] = defaultdict(
-            lambda: _JsonTypeInferrer(config_format.true_values, config_format.false_values, config_format.null_values)
-            if config_format.inference_type != InferenceType.NONE
-            else _DisabledTypeInferrer()
+            lambda: (
+                _JsonTypeInferrer(config_format.true_values, config_format.false_values, config_format.null_values)
+                if config_format.inference_type != InferenceType.NONE
+                else _DisabledTypeInferrer()
+            )
         )
         data_generator = self._csv_reader.read_data(config, file, stream_reader, logger, self.file_read_mode)
         read_bytes = 0
@@ -399,12 +401,13 @@ class _JsonTypeInferrer(_TypeInferrer):
         inferred_types.add(self._STRING_TYPE)
         return inferred_types
 
+    # Directly integrate `_value_to_bool` logic to avoid function call overhead
     def _is_boolean(self, value: str) -> bool:
-        try:
-            _value_to_bool(value, self._boolean_trues, self._boolean_falses)
+        if value in self._boolean_trues:
             return True
-        except ValueError:
-            return False
+        if value in self._boolean_falses:
+            return True
+        return False
 
     @staticmethod
     def _is_integer(value: str) -> bool:
