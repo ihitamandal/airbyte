@@ -9,8 +9,33 @@ from typing import Any, Dict, List, Optional, Union
 from airbyte_cdk.test.mock_http import HttpResponse
 
 
-def _extract(path: List[str], response_template: Dict[str, Any]) -> Any:
-    return functools.reduce(lambda a, b: a[b], path, response_template)
+def _extract(path: list[str], response_template: dict[str, object]) -> object:
+    """Extracts a value from a nested dictionary based on a list of keys.
+
+    Parameters
+    ----------
+    path : list of str
+        A list of keys representing the path to the desired value in the nested dictionary.
+    response_template : dict of str to object
+        The nested dictionary from which the value is to be extracted.
+
+    Returns
+    -------
+    object
+        The value extracted from the nested dictionary.
+
+    Raises
+    ------
+    KeyError
+        If any key in the path does not exist in the dictionary.
+    """
+    accumulator = response_template
+    for key in path:
+        try:
+            accumulator = accumulator[key]  # Type checking makes sure that the key and accumulator types are compatible
+        except KeyError as e:
+            raise KeyError(f"Key {key} not found in the dictionary.") from e
+    return accumulator
 
 
 def _replace_value(dictionary: Dict[str, Any], path: List[str], value: Any) -> None:
