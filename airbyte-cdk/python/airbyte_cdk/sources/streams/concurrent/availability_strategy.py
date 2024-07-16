@@ -29,6 +29,14 @@ class StreamAvailable(StreamAvailability):
         return True
 
     def message(self) -> Optional[str]:
+        """
+        Returns None since there is no specific message for a stream in this state.
+
+        Returns
+        -------
+        Optional[str]
+            None, indicating no message.
+        """
         return None
 
 
