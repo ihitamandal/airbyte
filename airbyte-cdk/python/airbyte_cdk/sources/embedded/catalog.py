@@ -36,6 +36,20 @@ def to_configured_stream(
 
 
 def to_configured_catalog(configured_streams: List[ConfiguredAirbyteStream]) -> ConfiguredAirbyteCatalog:
+    """Convert a list of ConfiguredAirbyteStream instances to a ConfiguredAirbyteCatalog.
+
+    This function leverages type annotations for robustness and maintainability.
+
+    Parameters
+    ----------
+    configured_streams : list[ConfiguredAirbyteStream]
+        A list of configured Airbyte streams.
+
+    Returns
+    -------
+    ConfiguredAirbyteCatalog
+        A configured Airbyte catalog containing the provided streams.
+    """
     return ConfiguredAirbyteCatalog(streams=configured_streams)
 
 
