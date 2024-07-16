@@ -14,7 +14,7 @@ from airbyte_cdk.models import ConnectorSpecification, FailureType
 from airbyte_cdk.utils.traced_exception import AirbyteTracedException
 from jsonschema import RefResolver, validate
 from jsonschema.exceptions import ValidationError
-from pydantic.v1 import BaseModel, Field
+from pydantic.v1 import validator, BaseModel, Field
 
 
 class JsonFileLoader:
@@ -190,15 +190,25 @@ class InternalConfig(BaseModel):
         return super().dict(*args, **kwargs)  # type: ignore[no-any-return]
 
     def is_limit_reached(self, records_counter: int) -> bool:
+        """Check if record count reached limit set by internal config.
+
+        Parameters
+        ----------
+        records_counter : int
+            Number of records already read.
+
+        Returns
+        -------
+        bool
+            True if limit reached, False otherwise.
         """
-        Check if record count reached limit set by internal config.
-        :param records_counter - number of records already red
-        :return True if limit reached, False otherwise
-        """
-        if self.limit:
-            if records_counter >= self.limit:
-                return True
-        return False
+        if self.limit is None:
+            return False
+        return records_counter >= self.limit
+
+    @validator("limit")
+    def check_limit(cls, value: Optional[int]) -> Optional[int]:
+        return validate_limit(value)
 
 
 def split_config(config: Mapping[str, Any]) -> Tuple[dict[str, Any], InternalConfig]:
@@ -221,3 +231,21 @@ def split_config(config: Mapping[str, Any]) -> Tuple[dict[str, Any], InternalCon
         else:
             main_config[k] = v
     return main_config, InternalConfig.parse_obj(internal_config)
+
+
+def validate_limit(value: Optional[int]) -> Optional[int]:
+    """Validate the limit attribute during initialization.
+
+    Parameters
+    ----------
+    value : Optional[int]
+        The limit value to be validated.
+
+    Returns
+    -------
+    Optional[int]
+        The validated limit value.
+    """
+    if value is not None and value < 0:
+        raise ValueError("limit must be non-negative")
+    return value
