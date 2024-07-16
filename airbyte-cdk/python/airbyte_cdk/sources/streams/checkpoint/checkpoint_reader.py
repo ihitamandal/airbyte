@@ -71,7 +71,14 @@ class IncrementalCheckpointReader(CheckpointReader):
     def observe(self, new_state: Mapping[str, Any]) -> None:
         self._state = new_state
 
-    def get_checkpoint(self) -> Optional[Mapping[str, Any]]:
+    def get_checkpoint(self) -> Optional[frozenset[tuple[str, object]]]:
+        """Get the current checkpoint state.
+
+        Returns
+        -------
+        Optional[frozenset[tuple[str, object]]]
+            The current state of the stream checkpoint.
+        """
         return self._state
 
 
