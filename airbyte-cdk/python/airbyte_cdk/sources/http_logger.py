@@ -43,5 +43,7 @@ def format_http_message(
     return log_message
 
 
-def _normalize_body_string(body_str: Optional[Union[str, bytes]]) -> Optional[str]:
-    return body_str.decode() if isinstance(body_str, (bytes, bytearray)) else body_str
+def _normalize_body_string(body_str: Optional[Union[str, bytes, bytearray]]) -> Optional[str]:
+    if isinstance(body_str, (bytes, bytearray)):
+        return body_str.decode()
+    return body_str
