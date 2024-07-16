@@ -16,7 +16,10 @@ from airbyte_cdk.sources.embedded.tools import get_first
 
 
 def get_stream(catalog: AirbyteCatalog, stream_name: str) -> Optional[AirbyteStream]:
-    return get_first(catalog.streams, lambda s: s.name == stream_name)
+    for stream in catalog.streams:
+        if stream.name == stream_name:
+            return stream
+    return None
 
 
 def get_stream_names(catalog: AirbyteCatalog) -> List[str]:
