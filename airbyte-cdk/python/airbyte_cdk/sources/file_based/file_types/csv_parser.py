@@ -159,9 +159,11 @@ class CsvParser(FileTypeParser):
         #  sources will likely require one. Rather than modify the interface now we can wait until the real use case
         config_format = _extract_format(config)
         type_inferrer_by_field: Dict[str, _TypeInferrer] = defaultdict(
-            lambda: _JsonTypeInferrer(config_format.true_values, config_format.false_values, config_format.null_values)
-            if config_format.inference_type != InferenceType.NONE
-            else _DisabledTypeInferrer()
+            lambda: (
+                _JsonTypeInferrer(config_format.true_values, config_format.false_values, config_format.null_values)
+                if config_format.inference_type != InferenceType.NONE
+                else _DisabledTypeInferrer()
+            )
         )
         data_generator = self._csv_reader.read_data(config, file, stream_reader, logger, self.file_read_mode)
         read_bytes = 0
@@ -240,7 +242,11 @@ class CsvParser(FileTypeParser):
 
     @staticmethod
     def _value_is_none(value: Any, deduped_property_type: Optional[str], null_values: Set[str], strings_can_be_null: bool) -> bool:
-        return value in null_values and (strings_can_be_null or deduped_property_type != "string")
+        # Avoiding the redundant check for string type when strings_can_be_null is True
+        if value in null_values:
+            if strings_can_be_null or deduped_property_type != "string":
+                return True
+        return False
 
     @staticmethod
     def _pre_propcess_property_types(property_types: Dict[str, Any]) -> Mapping[str, str]:
