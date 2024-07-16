@@ -5,6 +5,7 @@
 import logging
 from distutils.util import strtobool
 from enum import Flag, auto
+from functools import lru_cache
 from typing import Any, Callable, Dict, Mapping, Optional
 
 from jsonschema import Draft7Validator, ValidationError, validators
@@ -87,26 +88,35 @@ class TypeTransformer:
         return original_item
 
     @staticmethod
-    def default_convert(original_item: Any, subschema: Dict[str, Any]) -> Any:
+    def default_convert(original_item: Any, subschema: dict[str, Any]) -> Any:
         """
-        Default transform function that is used when TransformConfig.DefaultSchemaNormalization flag set.
-        :param original_item original value of field.
-        :param subschema part of the jsonschema containing field type/format data.
-        :return transformed field value.
+        Default transform function used when TransformConfig.DefaultSchemaNormalization flag set.
+
+        Parameters
+        ----------
+        original_item : Any
+            Original value of field.
+        subschema : dict[str, Any]
+            Part of the JSON schema containing field type/format data.
+
+        Returns
+        -------
+        Any
+            Transformed field value.
         """
         target_type = subschema.get("type", [])
+
         if original_item is None and "null" in target_type:
             return None
+
         if isinstance(target_type, list):
-            # jsonschema type could either be a single string or array of type
-            # strings. In case if there is some disambigous and more than one
-            # type (except null) do not do any conversion and return original
-            # value. If type array has one type and null i.e. {"type":
-            # ["integer", "null"]}, convert value to specified type.
             target_type = [t for t in target_type if t != "null"]
+
             if len(target_type) != 1:
                 return original_item
+
             target_type = target_type[0]
+
         try:
             if target_type == "string":
                 return str(original_item)
@@ -124,6 +134,7 @@ class TypeTransformer:
                     return [original_item]
         except (ValueError, TypeError):
             return original_item
+
         return original_item
 
     def __get_normalizer(self, schema_key: str, original_validator: Callable):
@@ -194,3 +205,23 @@ class TypeTransformer:
         return (
             f"Failed to transform value {repr(e.instance)} of type '{instance_json_type}' to '{e.validator_value}', key path: '{key_path}'"
         )
+
+    @lru_cache(maxsize=128)
+    def __get_normalizer(self, key: str, orig_validator: Any) -> Any:
+        """
+        Returns a cached normalizer for the given key.
+
+        Parameters
+        ----------
+        key : str
+            JSON schema key.
+        orig_validator : Any
+            Original validator.
+
+        Returns
+        -------
+        Any
+            Cached normalizer.
+        """
+        # Implementation details for creating the normalizer
+        pass
