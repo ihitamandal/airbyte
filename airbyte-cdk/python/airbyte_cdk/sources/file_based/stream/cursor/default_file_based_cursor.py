@@ -115,8 +115,11 @@ class DefaultFileBasedCursor(AbstractFileBasedCursor):
 
     def _compute_earliest_file_in_history(self) -> Optional[RemoteFile]:
         if self._file_to_datetime_history:
+            # Get the item with the smallest ('last_modified', 'filename')
             filename, last_modified = min(self._file_to_datetime_history.items(), key=lambda f: (f[1], f[0]))
-            return RemoteFile(uri=filename, last_modified=datetime.strptime(last_modified, self.DATE_TIME_FORMAT))
+            # Directly parse datetime from string
+            last_modified_datetime = datetime.strptime(last_modified, self.DATE_TIME_FORMAT)
+            return RemoteFile(uri=filename, last_modified=last_modified_datetime)
         else:
             return None
 
