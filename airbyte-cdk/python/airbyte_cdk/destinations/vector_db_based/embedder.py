@@ -23,6 +23,7 @@ from langchain.embeddings.cohere import CohereEmbeddings
 from langchain.embeddings.fake import FakeEmbeddings
 from langchain.embeddings.localai import LocalAIEmbeddings
 from langchain.embeddings.openai import OpenAIEmbeddings
+from functools import lru_cache
 
 
 @dataclass
@@ -149,13 +150,29 @@ class FakeEmbedder(Embedder):
             return format_exception(e)
         return None
 
-    def embed_documents(self, documents: List[Document]) -> List[Optional[List[float]]]:
-        return cast(List[Optional[List[float]]], self.embeddings.embed_documents([document.page_content for document in documents]))
+    def embed_documents(self, documents: list[Document]) -> list[Optional[list[float]]]:
+        """Generate embeddings for a list of documents, utilizing a precomputed embeddings cache with LRU eviction.
+
+        Parameters
+        ----------
+        documents : list of Document
+            A list of documents to embed.
+
+        Returns
+        -------
+        list of Optional[list of float]
+            A list of embeddings for the provided documents. The list elements may be None if embedding failed.
+        """
+        return [self._embed_single_document(doc.page_content) for doc in documents]
 
     @property
     def embedding_dimensions(self) -> int:
         # use same vector size as for OpenAI embeddings to keep it realistic
         return OPEN_AI_VECTOR_SIZE
+
+    @lru_cache(maxsize=1024)
+    def _embed_single_document(self, page_content: str) -> list[Optional[float]]:
+        return cast(list[Optional[float]], self.embeddings.embed_documents([page_content])[0])
 
 
 CLOUD_DEPLOYMENT_MODE = "cloud"
