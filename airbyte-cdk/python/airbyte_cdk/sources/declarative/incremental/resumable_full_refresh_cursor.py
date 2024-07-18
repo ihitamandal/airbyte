@@ -1,10 +1,12 @@
 # Copyright (c) 2024 Airbyte, Inc., all rights reserved.
 
+from __future__ import annotations
 from dataclasses import InitVar, dataclass
 from typing import Any, Iterable, Mapping, Optional
 
 from airbyte_cdk.sources.declarative.incremental import DeclarativeCursor
 from airbyte_cdk.sources.declarative.types import Record, StreamSlice, StreamState
+from airbyte_cdk.sources.types import StreamSlice, StreamState
 
 
 @dataclass
@@ -94,3 +96,6 @@ class ResumableFullRefreshCursor(DeclarativeCursor):
         next_page_token: Optional[Mapping[str, Any]] = None,
     ) -> Mapping[str, Any]:
         return {}
+
+    def __init__(self, parameters: Mapping[str, Any]) -> None:
+        self._cursor: StreamState = {}
