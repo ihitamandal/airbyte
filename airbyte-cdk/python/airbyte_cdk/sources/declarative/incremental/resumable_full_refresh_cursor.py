@@ -1,10 +1,12 @@
 # Copyright (c) 2024 Airbyte, Inc., all rights reserved.
 
+from __future__ import annotations
 from dataclasses import InitVar, dataclass
 from typing import Any, Iterable, Mapping, Optional
 
 from airbyte_cdk.sources.declarative.incremental import DeclarativeCursor
 from airbyte_cdk.sources.declarative.types import Record, StreamSlice, StreamState
+from airbyte_cdk.sources.types import StreamSlice, StreamState
 
 
 @dataclass
@@ -46,7 +48,18 @@ class ResumableFullRefreshCursor(DeclarativeCursor):
         return False
 
     def select_state(self, stream_slice: Optional[StreamSlice] = None) -> Optional[StreamState]:
-        # A top-level RFR cursor only manages the state of a single partition
+        """Select and return the state, possibly based on the stream slice.
+
+        Parameters
+        ----------
+        stream_slice : Optional[StreamSlice]
+            Slice of the data stream, by default None.
+
+        Returns
+        -------
+        Optional[StreamState]
+            The current state, optionally modified based on the stream slice.
+        """
         return self._cursor
 
     def stream_slices(self) -> Iterable[StreamSlice]:
