@@ -52,38 +52,24 @@ class HttpResponseFilter:
         self._error_message_parser = JsonErrorMessageParser()
 
     def matches(self, response_or_exception: Optional[Union[requests.Response, Exception]]) -> Optional[ErrorResolution]:
+        if not response_or_exception:
+            return None
         filter_action = self._matches_filter(response_or_exception)
         mapped_key = (
             response_or_exception.status_code if isinstance(response_or_exception, requests.Response) else response_or_exception.__class__
         )
-
-        if isinstance(mapped_key, (int, Exception)):
-            default_mapped_error_resolution = self._match_default_error_mapping(mapped_key)
-        else:
-            default_mapped_error_resolution = None
-
-        if filter_action is not None:
-            default_error_message = default_mapped_error_resolution.error_message if default_mapped_error_resolution else ""
-            error_message = None
-            if isinstance(response_or_exception, requests.Response):
-                error_message = self._create_error_message(response_or_exception)
-            error_message = error_message or default_error_message
+        default_mapped_error_resolution = DEFAULT_ERROR_MAPPING.get(mapped_key)
+        if filter_action:
+            error_message = (
+                self._create_error_message(response_or_exception) if isinstance(response_or_exception, requests.Response) else ""
+            )
             failure_type = default_mapped_error_resolution.failure_type if default_mapped_error_resolution else FailureType.system_error
-
             return ErrorResolution(
                 response_action=filter_action,
                 failure_type=failure_type,
-                error_message=error_message,
+                error_message=error_message or default_mapped_error_resolution.error_message if default_mapped_error_resolution else "",
             )
-
-        if (
-            (isinstance(self.http_codes, list) and len(self.http_codes)) is None
-            and self.predicate is None
-            and self.error_message_contains is None
-        ) and default_mapped_error_resolution:
-            return default_mapped_error_resolution
-
-        return None
+        return default_mapped_error_resolution or None
 
     def _match_default_error_mapping(self, mapped_key: Union[int, type[Exception]]) -> Optional[ErrorResolution]:
         return DEFAULT_ERROR_MAPPING.get(mapped_key)

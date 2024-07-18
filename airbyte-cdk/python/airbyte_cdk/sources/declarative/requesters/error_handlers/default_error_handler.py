@@ -109,20 +109,13 @@ class DefaultErrorHandler(ErrorHandler):
         self._last_request_to_attempt_count: MutableMapping[requests.PreparedRequest, int] = {}
 
     def interpret_response(self, response_or_exception: Optional[Union[requests.Response, Exception]]) -> ErrorResolution:
-
-        if self.response_filters:
-            for response_filter in self.response_filters:
-                matched_error_resolution = response_filter.matches(response_or_exception=response_or_exception)
-                if matched_error_resolution:
-                    return matched_error_resolution
-        if isinstance(response_or_exception, requests.Response):
-            if response_or_exception.ok:
-                return SUCCESS_RESOLUTION
-
-        default_reponse_filter = DefaultHttpResponseFilter(parameters={}, config=self.config)
-        default_response_filter_resolution = default_reponse_filter.matches(response_or_exception)
-
-        return default_response_filter_resolution if default_response_filter_resolution else DEFAULT_ERROR_RESOLUTION
+        for response_filter in self.response_filters:
+            matched_error_resolution = response_filter.matches(response_or_exception=response_or_exception)
+            if matched_error_resolution:
+                return matched_error_resolution
+        if isinstance(response_or_exception, requests.Response) and response_or_exception.ok:
+            return SUCCESS_RESOLUTION
+        return DefaultHttpResponseFilter(parameters={}, config=self.config).matches(response_or_exception) or DEFAULT_ERROR_RESOLUTION
 
     def backoff_time(
         self, response_or_exception: Optional[Union[requests.Response, requests.RequestException]], attempt_count: int = 0
