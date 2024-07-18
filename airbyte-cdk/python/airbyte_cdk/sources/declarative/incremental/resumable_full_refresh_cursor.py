@@ -39,9 +39,10 @@ class ResumableFullRefreshCursor(DeclarativeCursor):
         """
         return True
 
-    def is_greater_than_or_equal(self, first: Record, second: Record) -> bool:
+    @staticmethod
+    def is_greater_than_or_equal(first: Any, second: Any) -> bool:
         """
-        RFR record don't have ordering to be compared between one another.
+        RFR record doesn't have ordering to be compared between one another.
         """
         return False
 
@@ -94,3 +95,6 @@ class ResumableFullRefreshCursor(DeclarativeCursor):
         next_page_token: Optional[Mapping[str, Any]] = None,
     ) -> Mapping[str, Any]:
         return {}
+
+    def __init__(self, parameters: Mapping[str, Any]) -> None:
+        self._cursor = {}
